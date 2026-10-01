@@ -1,0 +1,12 @@
+# Binaries and build artifacts
+bin/
+dist/
+*.upx
+
+# IDE and editor
+.idea/
+.vscode/
+
+# Logs and scratch
+*.log
+.superpowers/
