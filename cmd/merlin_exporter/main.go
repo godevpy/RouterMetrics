@@ -189,8 +189,9 @@ func main() {
 
 	router := setupRouter(cfg, registry)
 	server := &http.Server{
-		Addr:    cfg.ListenAddress,
-		Handler: router,
+		Addr:              cfg.ListenAddress,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
