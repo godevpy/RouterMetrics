@@ -1,0 +1,12 @@
+# Dependabot 配置:自动更新 GitHub Actions(含 SHA 固定的版本)与 Go 依赖
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
