@@ -1,4 +1,4 @@
-// Package main 是 merlin_exporter 的主程序入口，负责命令行参数解析、采集器装载、HTTP 服务启动及优雅停机。
+// Package main 是 router_metrics 的主程序入口，负责命令行参数解析、采集器装载、HTTP 服务启动及优雅停机。
 package main
 
 import (
@@ -41,12 +41,12 @@ type Config struct {
 
 // printVersion 向指定输出流打印版本信息
 func printVersion(w io.Writer) {
-	fmt.Fprintf(w, "merlin_exporter version %s (commit: %s, build time: %s)\n", Version, Commit, BuildTime)
+	fmt.Fprintf(w, "router_metrics version %s (commit: %s, build time: %s)\n", Version, Commit, BuildTime)
 }
 
 // parseFlags 解析传入的命令行参数并返回运行配置
 func parseFlags(args []string, output io.Writer) (*Config, error) {
-	fs := flag.NewFlagSet("merlin_exporter", flag.ContinueOnError)
+	fs := flag.NewFlagSet("router_metrics", flag.ContinueOnError)
 	fs.SetOutput(output)
 
 	fs.Usage = func() {
@@ -175,7 +175,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	log.Printf("[INFO] 正在启动 merlin_exporter %s (commit: %s, build time: %s)", Version, Commit, BuildTime)
+	log.Printf("[INFO] 正在启动 router_metrics %s (commit: %s, build time: %s)", Version, Commit, BuildTime)
 
 	// 创建专用的指标注册中心 (排除默认的 process/go 指标以严格控制内存开销)
 	registry := prometheus.NewRegistry()

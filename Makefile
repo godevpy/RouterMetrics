@@ -1,8 +1,8 @@
-# merlin_exporter Makefile
+# router_metrics Makefile
 # 用于 Asuswrt-Merlin 路由器的轻量级 Prometheus Exporter 构建配置
 
-BINARY_NAME   ?= merlin_exporter
-MODULE        := metrics/cmd/merlin_exporter
+BINARY_NAME   ?= router_metrics
+MODULE        := metrics/cmd/router_metrics
 BIN_DIR       := bin
 DIST_DIR      := dist
 
@@ -25,7 +25,7 @@ UPX           ?= $(shell command -v upx 2>/dev/null)
 all: test build
 
 help:
-	@echo "merlin_exporter 构建命令说明:"
+	@echo "router_metrics 构建命令说明:"
 	@echo "  make build          - 编译当前平台本地二进制 (开发调试)"
 	@echo "  make test           - 运行全量单元测试与竞态检测"
 	@echo "  make release-arm64  - 静态交叉编译 Linux arm64 二进制 (RT-AX86U / GT-AX6000 等)"
@@ -38,7 +38,7 @@ help:
 build:
 	@mkdir -p $(BIN_DIR)
 	@echo "==> 正在编译本地开发版本 ($(VERSION))..."
-	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME) ./cmd/merlin_exporter
+	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME) ./cmd/router_metrics
 	@echo "==> 编译完成: $(BIN_DIR)/$(BINARY_NAME)"
 
 # 全量测试
@@ -52,7 +52,7 @@ test:
 release-arm64:
 	@mkdir -p $(BIN_DIR)
 	@echo "==> 正在静态交叉编译 Linux arm64 二进制..."
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME)_arm64 ./cmd/merlin_exporter
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME)_arm64 ./cmd/router_metrics
 	@if [ -n "$(UPX)" ]; then \
 		echo "==> 正在使用 UPX 压缩 $(BIN_DIR)/$(BINARY_NAME)_arm64..."; \
 		$(UPX) --best --lzma $(BIN_DIR)/$(BINARY_NAME)_arm64; \
@@ -65,7 +65,7 @@ release-arm64:
 release-armv7:
 	@mkdir -p $(BIN_DIR)
 	@echo "==> 正在静态交叉编译 Linux armv7 二进制..."
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME)_armv7 ./cmd/merlin_exporter
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME)_armv7 ./cmd/router_metrics
 	@if [ -n "$(UPX)" ]; then \
 		echo "==> 正在使用 UPX 压缩 $(BIN_DIR)/$(BINARY_NAME)_armv7..."; \
 		$(UPX) --best --lzma $(BIN_DIR)/$(BINARY_NAME)_armv7; \
@@ -78,7 +78,7 @@ release-armv7:
 release-amd64:
 	@mkdir -p $(BIN_DIR)
 	@echo "==> 正在静态交叉编译 Linux amd64 二进制..."
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME)_amd64 ./cmd/merlin_exporter
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME)_amd64 ./cmd/router_metrics
 	@if [ -n "$(UPX)" ]; then \
 		echo "==> 正在使用 UPX 压缩 $(BIN_DIR)/$(BINARY_NAME)_amd64..."; \
 		$(UPX) --best --lzma $(BIN_DIR)/$(BINARY_NAME)_amd64; \

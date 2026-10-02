@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Test and Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+          cache: true
+
+      - name: Code Lint and Vet
+        run: go vet ./...
+
+      - name: Run Unit Tests with Race Detector
+        run: go test -v -race ./...
+
+      - name: Verify Cross Compilation
+        run: |
+          echo "==> Verifying Linux ARM64 compilation..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /dev/null ./cmd/router_metrics
+
+          echo "==> Verifying Linux ARMv7 compilation..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -o /dev/null ./cmd/router_metrics
+
+          echo "==> Verifying Linux ARMv5 compilation..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=5 go build -o /dev/null ./cmd/router_metrics
+
+          echo "==> Verifying Linux AMD64 compilation..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /dev/null ./cmd/router_metrics

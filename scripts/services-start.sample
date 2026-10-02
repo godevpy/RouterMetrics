@@ -5,8 +5,8 @@
 #
 # 安装与配置步骤:
 # 1. 将编译好的二进制放置在 JFFS 目录:
-#    cp merlin_exporter /jffs/bin/merlin_exporter
-#    chmod +x /jffs/bin/merlin_exporter
+#    cp router_metrics /jffs/bin/router_metrics
+#    chmod +x /jffs/bin/router_metrics
 #
 # 2. 将本脚本内容追加或替换到 /jffs/scripts/services-start:
 #    chmod +x /jffs/scripts/services-start
@@ -16,8 +16,8 @@
 #    curl http://127.0.0.1:9101/metrics
 # ==============================================================================
 
-BIN="/jffs/bin/merlin_exporter"
-LOG="/tmp/merlin_exporter.log"
+BIN="/jffs/bin/router_metrics"
+LOG="/tmp/router_metrics.log"
 PORT=":9101"
 
 # 检查可执行文件是否存在且具有执行权限
@@ -43,7 +43,7 @@ if [ -x "$BIN" ]; then
         > "$LOG" 2>&1 &
 
     # 记录系统日志 (可通过 Web 界面或 syslog 查看)
-    logger -t "merlin_exporter" "守护进程已在端口 $PORT 启动后台运行 (PID: $!)"
+    logger -t "router_metrics" "守护进程已在端口 $PORT 启动后台运行 (PID: $!)"
 else
-    logger -t "merlin_exporter" "[错误] 未找到可执行文件或缺少执行权限: $BIN"
+    logger -t "router_metrics" "[错误] 未找到可执行文件或缺少执行权限: $BIN"
 fi

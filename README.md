@@ -1,4 +1,4 @@
-# merlin_exporter
+# router_metrics
 
 专为运行 **Asuswrt-Merlin** 固件的路由器（如 RT-AX86U、GT-AX6000、RT-AC86U 及 Wi-Fi 7 BE 系列）深度定制的极轻量 Prometheus 指标采集端（Metrics Exporter）。
 
@@ -80,14 +80,14 @@ make release
 ## 🚀 Asuswrt-Merlin 路由器部署教程
 
 ### 1. 拷贝二进制到路由器
-将编译好的 `merlin_exporter_arm64`（或 armv7）上传到路由器的 `/jffs/bin/` 目录：
+将编译好的 `router_metrics_arm64`（或 armv7）上传到路由器的 `/jffs/bin/` 目录：
 ```bash
 # 在宿主机或 Ubuntu 上执行：
-scp bin/merlin_exporter_arm64 admin@192.168.50.1:/jffs/bin/merlin_exporter
+scp bin/router_metrics_arm64 admin@192.168.50.1:/jffs/bin/router_metrics
 
 # 登录路由器并赋予可执行权限：
 ssh admin@192.168.50.1
-chmod +x /jffs/bin/merlin_exporter
+chmod +x /jffs/bin/router_metrics
 ```
 
 ### 2. 配置开机自启动守护进程
@@ -97,14 +97,14 @@ chmod +x /jffs/bin/merlin_exporter
 # 如果之前没有 services-start，直接新建：
 cat << 'EOF' > /jffs/scripts/services-start
 #!/bin/sh
-BIN="/jffs/bin/merlin_exporter"
-LOG="/tmp/merlin_exporter.log"
+BIN="/jffs/bin/router_metrics"
+LOG="/tmp/router_metrics.log"
 
 if [ -x "$BIN" ]; then
     killall -q $(basename "$BIN")
     sleep 1
     nohup "$BIN" --web.listen-address=":9101" > "$LOG" 2>&1 &
-    logger -t "merlin_exporter" "Daemon started on port 9101"
+    logger -t "router_metrics" "Daemon started on port 9101"
 fi
 EOF
 
