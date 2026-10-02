@@ -2,6 +2,7 @@ package nvram
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -36,13 +37,25 @@ func (c *realClient) Get(ctx context.Context, key string) (string, error) {
 
 func (c *realClient) GetAll(ctx context.Context, keys []string) (map[string]string, error) {
 	res := make(map[string]string, len(keys))
+	var firstErr error
+	failures := 0
 	for _, k := range keys {
 		val, err := c.Get(ctx, k)
-		if err == nil {
-			res[k] = val
-		} else {
+		if err != nil {
+			// 记录首个错误并继续读取其余变量，避免单个 key 失败导致全部中断
+			if firstErr == nil {
+				firstErr = err
+			}
+			failures++
 			res[k] = ""
+			continue
 		}
+		res[k] = val
+	}
+	// 全部 key 均读取失败说明 nvram 命令本身不可用（缺失、无权限等），
+	// 必须向调用方返回错误，避免静默上报虚假指标
+	if len(keys) > 0 && failures == len(keys) {
+		return res, fmt.Errorf("全部 %d 个 NVRAM 变量读取失败: %w", failures, firstErr)
 	}
 	return res, nil
 }

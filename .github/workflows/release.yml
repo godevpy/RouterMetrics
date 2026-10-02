@@ -20,12 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version-file: 'go.mod'
           check-latest: true
@@ -38,11 +38,21 @@ jobs:
 
       - name: Resolve Version Information
         id: vars
+        env:
+          # 通过环境变量传入用户输入，避免直接内插到脚本造成 Shell 注入
+          TAG_INPUT: ${{ github.event.inputs.tag_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          if [ -n "${{ github.event.inputs.tag_name }}" ]; then
-            VERSION="${{ github.event.inputs.tag_name }}"
-          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
-            VERSION="${{ github.ref_name }}"
+          if [ -n "${TAG_INPUT}" ]; then
+            # 白名单校验手动输入的 tag，防止恶意字符
+            if ! echo "${TAG_INPUT}" | grep -qE '^v[0-9A-Za-z._-]+$'; then
+              echo "错误: tag_name 格式非法，必须匹配 ^v[0-9A-Za-z._-]+$" >&2
+              exit 1
+            fi
+            VERSION="${TAG_INPUT}"
+          elif [ "${REF_TYPE}" = "tag" ]; then
+            VERSION="${REF_NAME}"
           else
             VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
           fi
@@ -132,12 +142,19 @@ jobs:
           cat checksums.txt
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.vars.outputs.version }}
-          files: |
-            dist/router_metrics-*.tar.gz
-            dist/checksums.txt
-          generate_release_notes: true
-          draft: false
-          prerelease: false
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.vars.outputs.version }}
+        run: |
+          # 使用 GitHub 官方 gh CLI 发布 Release，避免依赖第三方 Action
+          if gh release view "${VERSION}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "==> Release ${VERSION} 已存在，上传产物..."
+            gh release upload "${VERSION}" dist/router_metrics-*.tar.gz dist/checksums.txt \
+              --repo "${GITHUB_REPOSITORY}" --clobber
+          else
+            echo "==> 创建 Release ${VERSION}..."
+            gh release create "${VERSION}" dist/router_metrics-*.tar.gz dist/checksums.txt \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${VERSION}" \
+              --generate-notes
+          fi
