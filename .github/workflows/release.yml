@@ -1,0 +1,143 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag (例如 v1.0.0，手动触发时可选填)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Publish Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+          cache: true
+
+      - name: Install UPX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y upx-ucl
+
+      - name: Resolve Version Information
+        id: vars
+        run: |
+          if [ -n "${{ github.event.inputs.tag_name }}" ]; then
+            VERSION="${{ github.event.inputs.tag_name }}"
+          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          fi
+          
+          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+          BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "commit=${COMMIT}" >> $GITHUB_OUTPUT
+          echo "build_time=${BUILD_TIME}" >> $GITHUB_OUTPUT
+          echo "Target Release Version: ${VERSION} (${COMMIT}) built at ${BUILD_TIME}"
+
+      - name: Cross Compile and Package Binaries
+        env:
+          VERSION: ${{ steps.vars.outputs.version }}
+          COMMIT: ${{ steps.vars.outputs.commit }}
+          BUILD_TIME: ${{ steps.vars.outputs.build_time }}
+        run: |
+          mkdir -p dist staging
+
+          LDFLAGS="-s -w -X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.BuildTime=${BUILD_TIME}"
+
+          # 目标架构矩阵: GOOS:GOARCH:EXTRA_ENV:TARGET_SUFFIX
+          # 覆盖博通 64位、博通 32位、老款 ARM、联发科小路由、以及 x86/macOS 平台
+          TARGETS=(
+            "linux:arm64::linux-arm64"
+            "linux:arm:7:linux-armv7"
+            "linux:arm:5:linux-armv5"
+            "linux:mipsle:softfloat:linux-mipsle"
+            "linux:amd64::linux-amd64"
+            "darwin:arm64::darwin-arm64"
+            "darwin:amd64::darwin-amd64"
+          )
+
+          for target in "${TARGETS[@]}"; do
+            IFS=":" read -r GOOS GOARCH GOEXTRA TARGET_SUFFIX <<< "$target"
+            PACKAGE_NAME="router_metrics-${VERSION}-${TARGET_SUFFIX}"
+            TARGET_DIR="staging/${PACKAGE_NAME}"
+            mkdir -p "${TARGET_DIR}"
+
+            echo "=========================================================="
+            echo "==> Building ${GOOS}/${GOARCH} (${TARGET_SUFFIX})..."
+
+            export CGO_ENABLED=0
+            export GOOS=${GOOS}
+            export GOARCH=${GOARCH}
+
+            if [ "${GOARCH}" = "arm" ] && [ -n "${GOEXTRA}" ]; then
+              export GOARM=${GOEXTRA}
+            else
+              unset GOARM
+            fi
+
+            if [ "${GOARCH}" = "mipsle" ] && [ -n "${GOEXTRA}" ]; then
+              export GOMIPS=${GOEXTRA}
+            else
+              unset GOMIPS
+            fi
+
+            BINARY_PATH="${TARGET_DIR}/router_metrics"
+            go build -ldflags="${LDFLAGS}" -o "${BINARY_PATH}" ./cmd/router_metrics
+
+            # 对 Linux 二进制进行 UPX 极限压缩，减小路由器 JFFS/U盘 空间占用
+            if [ "${GOOS}" = "linux" ] && [ "${GOARCH}" != "mipsle" ]; then
+              echo "==> Compressing with UPX..."
+              upx --best --lzma "${BINARY_PATH}" || echo "Warning: UPX compression skipped or failed for ${TARGET_SUFFIX}"
+            fi
+
+            # 打包附带配置文件示例与说明文档
+            if [ -f "scripts/services-start.sample" ]; then
+              cp scripts/services-start.sample "${TARGET_DIR}/"
+            fi
+            if [ -f "README.md" ]; then
+              cp README.md "${TARGET_DIR}/"
+            fi
+
+            TAR_PATH="dist/${PACKAGE_NAME}.tar.gz"
+            tar -czf "${TAR_PATH}" -C staging "${PACKAGE_NAME}"
+            echo "==> Archive created: ${TAR_PATH} ($(ls -lh "${TAR_PATH}" | awk '{print $5}'))"
+          done
+
+      - name: Generate Checksums
+        run: |
+          cd dist
+          sha256sum router_metrics-*.tar.gz > checksums.txt
+          echo "==> SHA256 Checksums:"
+          cat checksums.txt
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.version }}
+          files: |
+            dist/router_metrics-*.tar.gz
+            dist/checksums.txt
+          generate_release_notes: true
+          draft: false
+          prerelease: false
