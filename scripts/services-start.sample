@@ -1,0 +1,49 @@
+#!/bin/sh
+# ==============================================================================
+# Asuswrt-Merlin 开机自启与服务保活脚本模板
+# 目标路径: /jffs/scripts/services-start
+#
+# 安装与配置步骤:
+# 1. 将编译好的二进制放置在 JFFS 目录:
+#    cp merlin_exporter /jffs/bin/merlin_exporter
+#    chmod +x /jffs/bin/merlin_exporter
+#
+# 2. 将本脚本内容追加或替换到 /jffs/scripts/services-start:
+#    chmod +x /jffs/scripts/services-start
+#
+# 3. 手动验证启动:
+#    /jffs/scripts/services-start
+#    curl http://127.0.0.1:9101/metrics
+# ==============================================================================
+
+BIN="/jffs/bin/merlin_exporter"
+LOG="/tmp/merlin_exporter.log"
+PORT=":9101"
+
+# 检查可执行文件是否存在且具有执行权限
+if [ -x "$BIN" ]; then
+    # 防止进程重复运行
+    PROCNAME=$(basename "$BIN")
+    killall -q "$PROCNAME"
+    sleep 1
+
+    # 启动后台守护进程 (内存开销极低，常驻内存约 5~8MB)
+    # 可根据路由器性能开启或关闭特定采集器
+    nohup "$BIN" \
+        --web.listen-address="$PORT" \
+        --web.telemetry-path="/metrics" \
+        --scrape.timeout="5s" \
+        --collector.system=true \
+        --collector.netdev=true \
+        --collector.thermal=true \
+        --collector.wireless=true \
+        --collector.nvram=true \
+        --collector.lan_client=true \
+        --collector.lan-client.traffic=false \
+        > "$LOG" 2>&1 &
+
+    # 记录系统日志 (可通过 Web 界面或 syslog 查看)
+    logger -t "merlin_exporter" "守护进程已在端口 $PORT 启动后台运行 (PID: $!)"
+else
+    logger -t "merlin_exporter" "[错误] 未找到可执行文件或缺少执行权限: $BIN"
+fi
