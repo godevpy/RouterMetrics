@@ -44,3 +44,9 @@ jobs:
 
           echo "==> Verifying Linux AMD64 compilation..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /dev/null ./cmd/router_metrics
+
+          echo "==> Verifying Linux MIPSel (softfloat) compilation..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=mipsle GOMIPS=softfloat go build -o /dev/null ./cmd/router_metrics
+
+          echo "==> Verifying Linux MIPS big-endian (softfloat) compilation..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=mips GOMIPS=softfloat go build -o /dev/null ./cmd/router_metrics

@@ -77,6 +77,57 @@ make release
 
 ---
 
+## 📐 架构选择指南 (Architecture Guide)
+
+Release 发布包按 `uname -m` 风格的架构标记命名（如 `router_metrics-v1.0.0-linux-aarch64.tar.gz`），请按下表选择：
+
+### 华硕 Merlin（梅林固件）
+
+| 机型示例 | SoC 平台 | 下载包 |
+|---|---|---|
+| RT-AX86U / RT-AX88U / GT-AX6000 / RT-AX58U 等 AX/BE 系列 | 博通 HND（ARMv8 64 位） | `linux-aarch64` |
+| RT-AC86U / GT-AC2900 | 博通 HND（部分固件为 32 位用户态） | 先试 `linux-aarch64`，报错再用 `linux-armv7` |
+| RT-AC68U / RT-AC87U / RT-AC5300 等 AC 系列 | 博通 ARMv7 | `linux-armv7` |
+| RT-N66U 等 MIPS 老机型 | MIPS | 不建议（内存过小） |
+
+### OpenWrt
+
+| 平台 | 典型设备 | 下载包 |
+|---|---|---|
+| MT7622 / MT7986 (Filogic)、IPQ60xx / IPQ807x | 红米 AX6、小米 AX3600、GL.iNet MT 系列 | `linux-aarch64` |
+| MT7621 (Ramips) | 红米 AC2100、小米 CR660x、Newifi3 | `linux-mipsel` |
+| Atheros AR71xx / QCA95xx（大端 MIPS） | TP-Link 等老机型 | `linux-mips` |
+| IPQ40xx | GL-B1300 等 | `linux-armv7` |
+| x86 软路由 | — | `linux-x86_64` |
+
+### 如何在设备上确认架构
+
+SSH 登录路由器后执行：
+
+```bash
+uname -m
+```
+
+| `uname -m` 输出 | 下载包 |
+|---|---|
+| `aarch64` | `linux-aarch64` |
+| `armv7l` | `linux-armv7` |
+| `armv5tel` | `linux-armv5` |
+| `x86_64` | `linux-x86_64` |
+| `mips` | 需进一步区分字节序，见下方 |
+
+MIPS 设备需要确认字节序（大端/小端）：
+
+```bash
+echo -n I | hexdump -o | awk '{print substr($2,6,1); exit}'
+# 输出 1 → 小端，下载 linux-mipsel（如 MT7621）
+# 输出 0 → 大端，下载 linux-mips（如 Atheros）
+```
+
+也可直接查看 OpenWrt 的目标平台：`ramips` → `mipsel`，`ath79`/`ar71xx` → `mips`。
+
+---
+
 ## 🚀 Asuswrt-Merlin 路由器部署教程
 
 ### 1. 拷贝二进制到路由器

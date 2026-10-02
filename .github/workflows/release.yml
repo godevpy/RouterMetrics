@@ -76,13 +76,16 @@ jobs:
           LDFLAGS="-s -w -X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.BuildTime=${BUILD_TIME}"
 
           # 目标架构矩阵: GOOS:GOARCH:EXTRA_ENV:TARGET_SUFFIX
-          # 覆盖博通 64位、博通 32位、老款 ARM、联发科小路由、以及 x86/macOS 平台
+          # 包名后缀采用 uname -m 风格架构标记，便于用户在设备上对照确认
+          # 覆盖博通 64位(aarch64)、博通 32位(armv7)、老款 ARM(armv5)、
+          # 联发科小路由(mipsel)、Atheros 系 OpenWrt(mips 大端)、以及 x86/macOS 平台
           TARGETS=(
-            "linux:arm64::linux-arm64"
+            "linux:arm64::linux-aarch64"
             "linux:arm:7:linux-armv7"
             "linux:arm:5:linux-armv5"
-            "linux:mipsle:softfloat:linux-mipsle"
-            "linux:amd64::linux-amd64"
+            "linux:mipsle:softfloat:linux-mipsel"
+            "linux:mips:softfloat:linux-mips"
+            "linux:amd64::linux-x86_64"
             "darwin:arm64::darwin-arm64"
             "darwin:amd64::darwin-amd64"
           )
@@ -106,7 +109,7 @@ jobs:
               unset GOARM
             fi
 
-            if [ "${GOARCH}" = "mipsle" ] && [ -n "${GOEXTRA}" ]; then
+            if { [ "${GOARCH}" = "mipsle" ] || [ "${GOARCH}" = "mips" ]; } && [ -n "${GOEXTRA}" ]; then
               export GOMIPS=${GOEXTRA}
             else
               unset GOMIPS
@@ -116,7 +119,8 @@ jobs:
             go build -ldflags="${LDFLAGS}" -o "${BINARY_PATH}" ./cmd/router_metrics
 
             # 对 Linux 二进制进行 UPX 极限压缩，减小路由器 JFFS/U盘 空间占用
-            if [ "${GOOS}" = "linux" ] && [ "${GOARCH}" != "mipsle" ]; then
+            # MIPS 系跳过压缩，避免 UPX 对软浮点 MIPS 产生兼容性问题
+            if [ "${GOOS}" = "linux" ] && [ "${GOARCH}" != "mipsle" ] && [ "${GOARCH}" != "mips" ]; then
               echo "==> Compressing with UPX..."
               upx --best --lzma "${BINARY_PATH}" || echo "Warning: UPX compression skipped or failed for ${TARGET_SUFFIX}"
             fi
