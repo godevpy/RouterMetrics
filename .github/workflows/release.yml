@@ -152,9 +152,15 @@ jobs:
             gh release upload "${VERSION}" dist/router_metrics-*.tar.gz dist/checksums.txt \
               --repo "${GITHUB_REPOSITORY}" --clobber
           else
+            # tag 含 "-"（如 v1.0.0-rc.1、v0.9.0-beta.1）视为预发布版本
+            PRERELEASE_FLAG=""
+            if echo "${VERSION}" | grep -q -- "-"; then
+              echo "==> 检测到预发布版本号，标记为 Pre-release"
+              PRERELEASE_FLAG="--prerelease"
+            fi
             echo "==> 创建 Release ${VERSION}..."
             gh release create "${VERSION}" dist/router_metrics-*.tar.gz dist/checksums.txt \
               --repo "${GITHUB_REPOSITORY}" \
               --title "${VERSION}" \
-              --generate-notes
+              --generate-notes ${PRERELEASE_FLAG}
           fi
